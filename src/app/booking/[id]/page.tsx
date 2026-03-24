@@ -86,7 +86,7 @@ export default function BookingPage() {
                 type="number"
                 value={duration}
                 min={1}
-                max={30}
+                max={3}
                 onChange={e => setDuration(Number(e.target.value))}
                 style={{ border: 'none', background: 'transparent', fontSize: '13px', fontWeight: 500, color: 'var(--soil)', outline: 'none', width: '100%' }}
               />
