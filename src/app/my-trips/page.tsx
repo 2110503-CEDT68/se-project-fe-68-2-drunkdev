@@ -11,14 +11,18 @@ import styles from './page.module.css'
 interface ReviewModal {
   campgroundId: string
   bookingId: string
+  campName: string
+  bookDate: string
 }
 
 export default function MyTripsPage() {
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
   const [reviewModal, setReviewModal] = useState<ReviewModal | null>(null)
-  const [rating, setRating] = useState(5)
+  const [rating, setRating] = useState(0)
+  const [hoverRating, setHoverRating] = useState(0)
   const [comment, setComment] = useState('')
+  const [visibility, setVisibility] = useState<'visible' | 'hidden'>('visible')
   const [submitting, setSubmitting] = useState(false)
   const [reviewError, setReviewError] = useState('')
   const router = useRouter()
@@ -48,11 +52,13 @@ export default function MyTripsPage() {
     return getCheckout(bookDate, duration) < new Date()
   }
 
-  const handleOpenReview = (campgroundId: string, bookingId: string) => {
-    setRating(5)
+  const handleOpenReview = (campgroundId: string, bookingId: string, campName: string, bookDate: string) => {
+    setRating(0)
+    setHoverRating(0)
     setComment('')
+    setVisibility('visible')
     setReviewError('')
-    setReviewModal({ campgroundId, bookingId })
+    setReviewModal({ campgroundId, bookingId, campName, bookDate })
   }
 
   const handleSubmitReview = async () => {
@@ -111,7 +117,7 @@ export default function MyTripsPage() {
                   {completed ? (
                     <span
                       className={styles.cardAction}
-                      onClick={() => handleOpenReview(b.campground?._id, b._id)}
+                      onClick={() => handleOpenReview(b.campground?._id, b._id, b.campground?.name, b.bookDate)}
                     >
                       ⭐ Rate
                     </span>
@@ -134,64 +140,164 @@ export default function MyTripsPage() {
       {/* Review Modal */}
       {reviewModal && (
         <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100
         }}>
           <div style={{
-            background: '#fff', borderRadius: '16px', padding: '28px',
-            width: '100%', maxWidth: '400px', display: 'flex', flexDirection: 'column', gap: '16px'
+            background: '#f0ede8', borderRadius: '20px', padding: '6px',
+            width: '100%', maxWidth: '460px', boxShadow: '0 8px 32px rgba(0,0,0,0.18)'
           }}>
-            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700 }}>Rate your stay ⭐</h3>
+            <div style={{
+              background: '#fff', borderRadius: '16px', padding: '22px 24px',
+              display: 'flex', flexDirection: 'column', gap: '16px'
+            }}>
+              {/* Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 700, color: '#2a2a1a' }}>Edit review</h3>
+                <button
+                  onClick={() => setReviewModal(null)}
+                  style={{
+                    width: '30px', height: '30px', borderRadius: '8px', border: '1px solid #e0ddd6',
+                    background: '#f5f3ee', cursor: 'pointer', fontSize: '16px', color: '#8a8a7a',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1
+                  }}
+                >×</button>
+              </div>
 
-            {/* Star selector */}
-            <div style={{ display: 'flex', gap: '8px' }}>
-              {[1, 2, 3, 4, 5].map(s => (
-                <span
-                  key={s}
-                  onClick={() => setRating(s)}
-                  style={{ fontSize: '28px', cursor: 'pointer', opacity: s <= rating ? 1 : 0.25, transition: 'opacity 0.15s' }}
+              {/* Reviewer card */}
+              <div style={{
+                background: '#f5f3ee', borderRadius: '10px', padding: '12px 14px',
+                display: 'flex', alignItems: 'center', gap: '12px'
+              }}>
+                <div style={{
+                  width: '36px', height: '36px', borderRadius: '50%',
+                  background: '#d4ede3', color: '#0f6e56',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '12px', fontWeight: 700, flexShrink: 0
+                }}>
+                  {reviewModal.campName?.slice(0, 2).toUpperCase() || 'CA'}
+                </div>
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#2a2a1a' }}>{reviewModal.campName}</div>
+                  <div style={{ fontSize: '11px', color: '#8a8a7a' }}>
+                    {new Date(reviewModal.bookDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Rating */}
+              <div>
+                <div style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#8a8a7a', marginBottom: '8px' }}>Rating</div>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  {[1, 2, 3, 4, 5].map(s => (
+                    <span
+                      key={s}
+                      onClick={() => setRating(s)}
+                      onMouseEnter={() => setHoverRating(s)}
+                      onMouseLeave={() => setHoverRating(0)}
+                      style={{ cursor: 'pointer', fontSize: '22px', lineHeight: 1, transition: 'transform 0.1s', display: 'inline-block' }}
+                    >
+                      <svg viewBox="0 0 24 24" width="22" height="22"
+                        fill={s <= (hoverRating || rating) ? '#c47f17' : 'none'}
+                        stroke={s <= (hoverRating || rating) ? '#c47f17' : '#c8c3b8'}
+                        strokeWidth="1.5"
+                      >
+                        <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z" />
+                      </svg>
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Comment */}
+              <div>
+                <div style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#8a8a7a', marginBottom: '8px' }}>Comment</div>
+                <textarea
+                  placeholder="Share your experience..."
+                  value={comment}
+                  onChange={e => setComment(e.target.value.slice(0, 500))}
+                  rows={4}
+                  style={{
+                    width: '100%', borderRadius: '10px', border: 'none',
+                    background: '#1e1e1e', color: '#fff',
+                    padding: '12px 14px', fontSize: '13px', resize: 'none',
+                    fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box',
+                    lineHeight: 1.6
+                  }}
+                />
+                <div style={{ textAlign: 'right', fontSize: '11px', color: '#aaa89a', marginTop: '4px' }}>
+                  {comment.length} / 500
+                </div>
+              </div>
+
+              {/* Visibility */}
+              <div>
+                <div style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#8a8a7a', marginBottom: '8px' }}>Visibility</div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={() => setVisibility('visible')}
+                    style={{
+                      flex: 1, padding: '9px 12px', borderRadius: '10px', fontSize: '13px', cursor: 'pointer',
+                      fontFamily: 'inherit', fontWeight: 500, transition: 'all 0.15s',
+                      border: visibility === 'visible' ? '1.5px solid #4a6741' : '1.5px solid #e0ddd6',
+                      background: visibility === 'visible' ? '#eef5eb' : '#fff',
+                      color: visibility === 'visible' ? '#4a6741' : '#8a8a7a',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+                    }}
+                  >
+                    <span>👁</span> Visible to guests
+                  </button>
+                  <button
+                    onClick={() => setVisibility('hidden')}
+                    style={{
+                      flex: 1, padding: '9px 12px', borderRadius: '10px', fontSize: '13px', cursor: 'pointer',
+                      fontFamily: 'inherit', fontWeight: 500, transition: 'all 0.15s',
+                      border: visibility === 'hidden' ? '1.5px solid #4a6741' : '1.5px solid #e0ddd6',
+                      background: visibility === 'hidden' ? '#eef5eb' : '#fff',
+                      color: visibility === 'hidden' ? '#4a6741' : '#8a8a7a',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+                    }}
+                  >
+                    <span>🚫</span> Hidden
+                  </button>
+                </div>
+              </div>
+
+              {reviewError && <p style={{ color: 'red', fontSize: '12px', margin: 0 }}>{reviewError}</p>}
+
+              {/* Footer buttons */}
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', borderTop: '1px solid #ece8e0', paddingTop: '14px' }}>
+                <button
+                  onClick={() => setReviewModal(null)}
+                  style={{
+                    padding: '8px 18px', borderRadius: '8px', border: '1px solid #ddd',
+                    background: '#fff', cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit', color: '#5a5a4a'
+                  }}
                 >
-                  ⭐
-                </span>
-              ))}
-            </div>
-
-            {/* Comment */}
-            <textarea
-              placeholder="Share your experience..."
-              value={comment}
-              onChange={e => setComment(e.target.value)}
-              rows={4}
-              style={{
-                width: '100%', borderRadius: '10px', border: '1px solid #e0e0d8',
-                padding: '10px 12px', fontSize: '14px', resize: 'none',
-                fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box'
-              }}
-            />
-
-            {reviewError && <p style={{ color: 'red', fontSize: '12px', margin: 0 }}>{reviewError}</p>}
-
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => setReviewModal(null)}
-                style={{
-                  padding: '8px 18px', borderRadius: '8px', border: '1px solid #ddd',
-                  background: '#fff', cursor: 'pointer', fontSize: '14px'
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmitReview}
-                disabled={submitting}
-                style={{
-                  padding: '8px 18px', borderRadius: '8px', border: 'none',
-                  background: 'var(--soil, #6B5240)', color: '#fff',
-                  cursor: 'pointer', fontSize: '14px', fontWeight: 600
-                }}
-              >
-                {submitting ? 'Submitting...' : 'Submit'}
-              </button>
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSubmitReview}
+                  disabled={submitting}
+                  style={{
+                    padding: '8px 18px', borderRadius: '8px', border: '1px solid #ddd',
+                    background: '#fff', cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit', color: '#5a5a4a'
+                  }}
+                >
+                  Save
+                </button>
+                <button
+                  onClick={handleSubmitReview}
+                  disabled={submitting}
+                  style={{
+                    padding: '8px 18px', borderRadius: '8px', border: 'none',
+                    background: '#4a6741', color: '#fff',
+                    cursor: 'pointer', fontSize: '13px', fontWeight: 600, fontFamily: 'inherit'
+                  }}
+                >
+                  {submitting ? 'Saving...' : 'Save & Publish'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

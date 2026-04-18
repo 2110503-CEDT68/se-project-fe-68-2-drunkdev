@@ -1,6 +1,6 @@
 import { Camp, Booking, User } from '@/types/camp'
 
-const BASE_URL = 'http://localhost:5000'
+const BASE_URL = 'https://be-02-project.vercel.app'
 
 // ── Campgrounds ──────────────────────────────
 export async function getCamps(): Promise<Camp[]> {
@@ -120,4 +120,23 @@ export async function createReview(token: string, campgroundId: string, rating: 
   const data = await res.json()
   if (!data.success) throw new Error(data.message || 'Review failed')
   return data.data
+}
+
+export async function getAllReviews(token: string) {
+  const res = await fetch(`${BASE_URL}/api/v1/reviews`, {
+    headers: { Authorization: `Bearer ${token}` }
+  })
+  const data = await res.json()
+  if (!data.success) throw new Error(data.message || 'Failed to fetch reviews')
+  return data.data
+}
+
+export async function deleteReview(token: string, reviewId: string) {
+  const res = await fetch(`${BASE_URL}/api/v1/reviews/${reviewId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` }
+  })
+  const data = await res.json()
+  if (!data.success) throw new Error(data.message || 'Delete failed')
+  return data
 }
