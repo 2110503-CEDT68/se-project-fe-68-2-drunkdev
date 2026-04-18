@@ -1,6 +1,6 @@
 import { Camp, Booking, User } from '@/types/camp'
 
-const BASE_URL = 'https://be-02-project.vercel.app'
+const BASE_URL = 'http://localhost:5000'
 
 // ── Campgrounds ──────────────────────────────
 export async function getCamps(): Promise<Camp[]> {
@@ -13,6 +13,21 @@ export async function getCampById(id: string): Promise<Camp> {
   const res = await fetch(`${BASE_URL}/api/v1/campgrounds/${id}`)
   const data = await res.json()
   return data.data
+}
+
+export async function createCamp(token: string, camp: Partial<Camp>) : Promise<Camp> {
+  const res = await fetch(`${BASE_URL}/api/v1/campgrounds`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(camp)
+  })
+
+  const data = await res.json();
+  if(!data.success) throw new Error(data.message || 'Can not create new Campground');
+  return data;
 }
 
 // ── Auth ─────────────────────────────────────

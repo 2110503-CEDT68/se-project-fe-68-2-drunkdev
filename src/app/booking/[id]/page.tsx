@@ -5,6 +5,7 @@ import { getCampById, createBooking, updateBooking } from '@/lib/api'
 import { getToken } from '@/lib/auth'
 import { Camp } from '@/types/camp'
 import styles from '../page.module.css'
+import CampgroundDetailPage from '@/components/CampgroundDetailPage'
 
 export default function BookingPage() {
   const { id } = useParams<{ id: string }>()
@@ -46,7 +47,8 @@ export default function BookingPage() {
 
   return (
     <main className={styles.wrapper} style={{ minHeight: '100vh' }}>
-      <div className={styles.hero}>
+      <CampgroundDetailPage/>
+      {/* <div className={styles.hero}>
         <button className={styles.backBtn} onClick={() => router.back()}>← Back</button>
         <span className={styles.heroEmoji}>🏕️</span>
         <div className={styles.heroOverlay} />
@@ -98,7 +100,7 @@ export default function BookingPage() {
         <button className={styles.bookBtn} onClick={handleBook} disabled={loading}>
           {loading ? (bookingId ? 'Updating...' : 'Booking...') : (bookingId ? 'Confirm edit →' : 'Confirm booking →')}
         </button>
-      </div>
+      </div> */}
     </main>
   )
 }

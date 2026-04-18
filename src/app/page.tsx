@@ -51,7 +51,7 @@ export default function HomePage() {
         <h2 className={styles.sectionTitle}>Popular spots</h2>
         <p className={styles.sectionSub}>Highly rated by campers this season</p>
         <div className={styles.cardGrid}>
-          {camps.map((camp, i) => (
+          {camps.map((camp) => (
             <CampCard
               key={camp._id}
               href={`/booking/${camp._id}`}
@@ -60,7 +60,7 @@ export default function HomePage() {
               rating={camp.averageRating}
               reviewCount={camp.totalReviews}
               tags={[camp.region]}
-              imgSrc={campImages[i % campImages.length]}
+              imgSrc={camp.imgSrc[0]}
             />
           ))}
         </div>
