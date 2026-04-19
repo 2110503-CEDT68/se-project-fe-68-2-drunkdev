@@ -1,4 +1,5 @@
 export interface Room {
+  _id: string
   roomType: string;
   description: string;
   price: number;
@@ -49,7 +50,13 @@ export interface Review {
   name: string
   rating: number
   comment: string
-  user: string
-  campground: string
+  user: {
+    _id: string;
+    name: string;
+  }
+  campground: {
+    _id: string;
+    name: string;
+  }
   createdAt: string
 }

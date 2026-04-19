@@ -60,7 +60,7 @@ export default function HomePage() {
               rating={camp.averageRating}
               reviewCount={camp.totalReviews}
               tags={[camp.region]}
-              imgSrc={camp.imgSrc[0]}
+              imgSrc={camp.imgSrc ? camp.imgSrc[0] : '/img/camp1.jpg'}
             />
           ))}
         </div>

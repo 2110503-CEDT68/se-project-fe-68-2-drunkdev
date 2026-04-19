@@ -1,11 +1,12 @@
 import { Camp, Booking, User } from '@/types/camp'
 
-const BASE_URL = 'https://be-02-project.vercel.app'
+const BASE_URL = 'http://localhost:5000'
 
 // ── Campgrounds ──────────────────────────────
 export async function getCamps(): Promise<Camp[]> {
   const res = await fetch(`${BASE_URL}/api/v1/campgrounds`)
   const data = await res.json()
+  if(!data.success) throw new Error(data.message || 'Can not get Campground');
   return data.data
 }
 
@@ -118,7 +119,7 @@ export async function createReview(token: string, campgroundId: string, rating: 
     body: JSON.stringify({ rating, comment })
   })
   const data = await res.json()
-  if (!data.success) throw new Error(data.message || 'Review failed')
+  if (!data.success) throw new Error(data.message || 'Create review failed')
   return data.data
 }
 
@@ -131,12 +132,55 @@ export async function getAllReviews(token: string) {
   return data.data
 }
 
+export async function getReviews({
+  token,
+  campgroundId
+}: {
+  token?: string;
+  campgroundId?: string;
+}) {
+  let res;
+  if(token) {
+    if(campgroundId) {
+      res = await fetch(`${BASE_URL}/api/v1/reviews/${campgroundId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    }
+    else {
+      res = await fetch(`${BASE_URL}/api/v1/reviews/user`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    }
+  }
+  else {
+    res = await fetch(`${BASE_URL}/api/v1/campgrounds/${campgroundId}/reviews`)
+  }
+
+  const data = await res.json();
+  if (!data.success) throw new Error(data.message || 'Failed to fetch reviews')
+  return data.data
+}
+
+export async function updateReview(token: string, reviewId: string, rating: number, comment: string) {
+  const res = await fetch(`${BASE_URL}/api/v1/reviews/${reviewId}`, {
+    method: 'PUT',
+    headers: { 
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}` 
+    },
+    body: JSON.stringify({ rating, comment })
+  })
+  const data = await res.json()
+  if (!data.success) throw new Error(data.message || 'Update review failed')
+  return data
+}
+
 export async function deleteReview(token: string, reviewId: string) {
   const res = await fetch(`${BASE_URL}/api/v1/reviews/${reviewId}`, {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${token}` }
   })
   const data = await res.json()
-  if (!data.success) throw new Error(data.message || 'Delete failed')
+  if (!data.success) throw new Error(data.message || 'Delete review failed')
   return data
 }

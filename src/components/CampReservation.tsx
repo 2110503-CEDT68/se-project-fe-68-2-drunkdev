@@ -1,8 +1,9 @@
 import React from "react";
 import type { RoomType } from "./CampRoomTypes";
+import { Room } from "@/types/camp";
 
 interface CampReservationProps {
-  selectedRoom: RoomType | null;
+  selectedRoom: Room | null;
   checkIn: string;
   checkOut: string;
   guests: number;
@@ -26,7 +27,7 @@ const CampReservation: React.FC<CampReservationProps> = ({
   const fee = Math.round(subtotal * SERVICE_FEE_RATE);
   const total = subtotal + fee;
   const canBook =
-    selectedRoom !== null && selectedRoom.availability !== "unavailable";
+    selectedRoom !== null && selectedRoom.available != 0;
 
   return (
     <div className="reservation-card">
@@ -39,7 +40,7 @@ const CampReservation: React.FC<CampReservationProps> = ({
               </span>
               <span className="price-unit">/ night</span>
             </div>
-            <div className="selected-room-label">{selectedRoom.name}</div>
+            <div className="selected-room-label">{selectedRoom.roomType}</div>
           </div>
         </>
       ) : (

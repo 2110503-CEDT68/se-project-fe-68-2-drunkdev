@@ -3,7 +3,7 @@
 import CampgroundDetailPage from "@/components/CampgroundDetailPage"
 
 
-export function createCamp() {
+export default function createCamp() {
     return (
         <>
             <CampgroundDetailPage/>

@@ -1,3 +1,4 @@
+import { Room } from "@/types/camp";
 import React from "react";
 
 export interface RoomType {
@@ -13,9 +14,9 @@ export interface RoomType {
 }
 
 interface CampRoomTypesProps {
-  rooms: RoomType[];
+  rooms: Room[];
   selectedRoomId: string | null;
-  onSelectRoom: (room: RoomType) => void;
+  onSelectRoom: (room: Room) => void;
 }
 
 const availColors = {
@@ -35,13 +36,26 @@ const CampRoomTypes: React.FC<CampRoomTypesProps> = ({
 
       <div className="rooms-list">
         {rooms.map((room) => {
-          const isSelected = selectedRoomId === room.id;
-          const isUnavailable = room.availability === "unavailable";
-          const avail = availColors[room.availability];
+          const isSelected = selectedRoomId === room._id;
+          const isUnavailable = room.available == 0;
+          let avail;
+          let availabilityLabel;
+          if(room.available > 5) {
+            availabilityLabel = "Avaliable"
+            avail = { bg: "#eaf3de", color: "#3b6d11" };
+          }
+          else if(room.available > 0) {
+            availabilityLabel = `${room.available} left`
+            avail = { bg: "#faeeda", color: "#854f0b" };
+          }
+          else {
+            availabilityLabel = "Fully Booked"
+            avail = { bg: "#f0efea", color: "#8a8a7a" };
+          }
 
           return (
             <div
-              key={room.id}
+              key={room._id}
               className={`room-card ${isSelected ? "room-selected" : ""} ${isUnavailable ? "room-unavailable" : ""}`}
               onClick={() => !isUnavailable && onSelectRoom(room)}
             >
@@ -52,19 +66,19 @@ const CampRoomTypes: React.FC<CampRoomTypesProps> = ({
               </div>
 
               <div className="room-thumb">
-                <img src={room.imageUrl} alt={room.name} />
+                {/* <img src={room.imgSrc} alt={room.name} /> */}
               </div>
 
               <div className="room-body">
                 <div className="room-name-row">
-                  <span className="room-name">{room.name}</span>
-                  {room.popular && <span className="popular-badge">Popular</span>}
+                  <span className="room-name">{room.roomType}</span>
+                  {/* {room.popular && <span className="popular-badge">Popular</span>} */}
                 </div>
                 <p className="room-desc">{room.description}</p>
                 <div className="room-tags">
-                  {room.tags.map((tag) => (
+                  {/* {room.tags.map((tag) => (
                     <span key={tag} className="rtag">{tag}</span>
-                  ))}
+                  ))} */}
                 </div>
               </div>
 
@@ -79,7 +93,7 @@ const CampRoomTypes: React.FC<CampRoomTypesProps> = ({
                   className="avail-badge"
                   style={{ background: avail.bg, color: avail.color }}
                 >
-                  {room.availabilityLabel}
+                  {availabilityLabel}
                 </span>
               </div>
             </div>
