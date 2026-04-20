@@ -49,14 +49,12 @@ const CampRatingsReviews = ({campgroundId}: {campgroundId: string}) => {
           setUsername(user.name);
           userIdRef.current = user._id;
           isAdmin.current = user.role === "admin";
-      });
+        }).catch(err => console.error('Failed to fetch user:', err));
       }
     }
     getReviews({ campgroundId: campgroundId }).then((r) => {
-      // console.log("Review")
-      // console.log(r);
-      setReviews(r);
-    });
+      setReviews(r ?? []);
+    }).catch(err => console.error('Failed to fetch reviews:', err));
   }, [campgroundId]);
 
   useEffect(() => {
@@ -93,14 +91,15 @@ const CampRatingsReviews = ({campgroundId}: {campgroundId: string}) => {
     const token = getToken();
     if (!token) return;
 
-    await createReview(token, campgroundId, userRating, reviewText)
-    // refresh
-    const r = await getReviews({ campgroundId });
-    setReviews(r ?? []);
-
-    // reset form
-    setUserRating(0);
-    setReviewText("");
+    try {
+      await createReview(token, campgroundId, userRating, reviewText);
+      const r = await getReviews({ campgroundId });
+      setReviews(r ?? []);
+      setUserRating(0);
+      setReviewText("");
+    } catch (err) {
+      console.error('Failed to submit review:', err);
+    }
   };  
 
   const handleDelete = async (reviewId: string) => {
@@ -223,7 +222,12 @@ const CampRatingsReviews = ({campgroundId}: {campgroundId: string}) => {
       </div>
 
       <div className="reviews-list">
-        {visibleReviews.map((review, i) => (
+        {visibleReviews.map((review, i) => {
+          const userName = review.user?.name ?? 'Unknown';
+          const initials = userName.length > 1
+            ? userName[0].toUpperCase() + userName[userName.length - 1].toUpperCase()
+            : userName[0]?.toUpperCase() ?? '?';
+          return (
           <div key={review._id} className="review-card">
             <div className="reviewer-row">
               <div
@@ -235,13 +239,12 @@ const CampRatingsReviews = ({campgroundId}: {campgroundId: string}) => {
                     avatarStyles[avatarColor[i % avatarColor.length]].color,
                 }}
               >
-                {review.user.name[0].toUpperCase() +
-                  review.user.name[review.user.name.length - 1].toUpperCase()}
+                {initials}
               </div>
               <div className="reviewer-meta">
                 <div className="reviewer-name">
-                  {review.user.name}
-                  {review.user._id === userIdRef.current && (
+                  {userName}
+                  {review.user?._id === userIdRef.current && (
                     <span className="own-badge"> (You)</span>
                   )}
                 </div>
@@ -284,7 +287,7 @@ const CampRatingsReviews = ({campgroundId}: {campgroundId: string}) => {
                   value={editText}
                   onChange={(e) => setEditText(e.target.value)}
                 />
-                { (review.user.role === "admin") &&
+                {review.user?.role === "admin" &&
                   <span
                     className="official-badge"
                     style={{
@@ -299,7 +302,7 @@ const CampRatingsReviews = ({campgroundId}: {campgroundId: string}) => {
             ) : (
               <>
               <span className="review-text">{review.comment}</span>
-                { (review.user.role === "admin") &&
+                {review.user?.role === "admin" &&
                   <span
                     className="official-badge"
                     style={{
@@ -313,7 +316,7 @@ const CampRatingsReviews = ({campgroundId}: {campgroundId: string}) => {
             )}
 
             {/* Action buttons (only user's review) */}
-            {(review.user._id === userIdRef.current || isAdmin.current) && (
+            {(review.user?._id === userIdRef.current || isAdmin.current) && (
               <div className="review-actions">
                 {editingId === review._id ? (
                   <>
@@ -361,7 +364,7 @@ const CampRatingsReviews = ({campgroundId}: {campgroundId: string}) => {
               </div>
             )}
           </div>
-        ))}
+        )})}
       </div>
 
       {reviews.length > 1 && (

@@ -20,7 +20,7 @@ export default function BookingPage() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    getCampById(id).then(setCamp)
+    getCampById(id).then(setCamp).catch(err => console.error('Failed to load camp:', err))
   }, [id])
 
   const handleBook = async () => {

@@ -13,7 +13,9 @@ export default function HomePage() {
   const router = useRouter()
 
   useEffect(() => {
-    getCamps().then(data => setCamps(data.slice(0, 6)))
+    getCamps()
+      .then(data => setCamps(data.slice(0, 6)))
+      .catch(err => console.error('Failed to fetch camps:', err))
   }, [])
 
   const campImages = [
@@ -51,7 +53,7 @@ export default function HomePage() {
         <h2 className={styles.sectionTitle}>Popular spots</h2>
         <p className={styles.sectionSub}>Highly rated by campers this season</p>
         <div className={styles.cardGrid}>
-          {camps.map((camp) => (
+          {camps.map((camp, i) => (
             <CampCard
               key={camp._id}
               href={`/booking/${camp._id}`}
@@ -60,7 +62,7 @@ export default function HomePage() {
               rating={camp.averageRating}
               reviewCount={camp.totalReviews}
               tags={[camp.region]}
-              imgSrc={camp.imgSrc ? camp.imgSrc[0] : '/img/camp1.jpg'}
+              imgSrc={camp.imgSrc?.[0] || campImages[i % campImages.length]}
             />
           ))}
         </div>

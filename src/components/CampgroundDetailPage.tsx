@@ -4,8 +4,9 @@ import CampDetails from "./CampDetails";
 import CampRatingsReviews from "./CampRatingsReviews";
 import CampRoomTypes from "./CampRoomTypes";
 import CampReservation from "./CampReservation";
-import {getCampById} from "@/lib/api";
-import { useParams } from "next/navigation";
+import { getCampById, createBooking } from "@/lib/api";
+import { getToken, isLoggedIn } from "@/lib/auth";
+import { useParams, useRouter } from "next/navigation";
 import { Camp, Room } from "@/types/camp";
 
 
@@ -13,23 +14,43 @@ import { Camp, Room } from "@/types/camp";
 
 const CampgroundDetailPage = () => {
   const { id } = useParams<{ id: string }>()
+  const router = useRouter()
   const [camp, setCamp] = useState<Camp | null>(null)
   const [roomType, setRoomType] = useState<Room[]>([])
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+  const [bookDate, setBookDate] = useState('');
+  const [duration, setDuration] = useState(1);
+  const [guests, setGuests] = useState(1);
+  const [bookingLoading, setBookingLoading] = useState(false);
+  const [bookingError, setBookingError] = useState('');
 
-  useEffect( ()=> {
+  useEffect(() => {
     getCampById(id).then((c) => {
       setCamp(c);
-      // console.log(c);
       setRoomType(c.rooms ?? []);
       setSelectedRoom(c.rooms?.[0] ?? null);
-    });
-
+    }).catch(err => console.error('Failed to fetch camp:', err));
   }, [id])
 
+  const handleBook = async () => {
+    if (!isLoggedIn()) { router.push('/auth'); return; }
+    if (!bookDate) { setBookingError('กรุณาเลือกวันที่'); return; }
+    if (selectedRoom && guests > selectedRoom.capacity) { setBookingError(`จำนวนคนเกินความจุ (สูงสุด ${selectedRoom.capacity} คน)`); return; }
+    const token = getToken();
+    if (!token) { router.push('/auth'); return; }
+    setBookingError('');
+    setBookingLoading(true);
+    try {
+      await createBooking(token, id, new Date(bookDate).toISOString(), duration);
+      router.push('/my-trips');
+    } catch (e: unknown) {
+      setBookingError(e instanceof Error ? e.message : 'เกิดข้อผิดพลาด');
+    } finally {
+      setBookingLoading(false);
+    }
+  };
 
-  // Simulate: change to false to see normal user view
-  const isAdmin = true;
+  const isAdmin = false;
 
   if (!camp) return <div style={{ padding: '40px', textAlign: 'center' }}>Loading...</div>
 
@@ -49,7 +70,7 @@ const CampgroundDetailPage = () => {
 
         {/* Full-width hero image */}
         <CampImage
-          imgSrc={camp.imgSrc[0]}
+          imgSrc={camp.imgSrc?.[0]}
           campName={camp.name}
           region={camp.region}
           rating={camp.averageRating}
@@ -82,12 +103,15 @@ const CampgroundDetailPage = () => {
             {/* Reservation card */}
             <CampReservation
               selectedRoom={selectedRoom}
-              checkIn="Apr 20"
-              checkOut="Apr 22"
-              guests={2}
-              nights={2}
-              isAdmin={isAdmin}
-              onEditCamp={() => alert("Open edit camp form")}
+              bookDate={bookDate}
+              duration={duration}
+              guests={guests}
+              onBookDateChange={setBookDate}
+              onDurationChange={setDuration}
+              onGuestsChange={setGuests}
+              onBook={handleBook}
+              bookingLoading={bookingLoading}
+              bookingError={bookingError}
             />
 
             <div className="section-divider" />

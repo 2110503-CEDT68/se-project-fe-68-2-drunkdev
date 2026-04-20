@@ -19,11 +19,12 @@ const CampImage: React.FC<CampImageProps> = ({
   return (
     <div className="camp-image-wrapper">
       <div className="camp-image-container">
-        {imgSrc ? (
-          <img src={imgSrc} alt={campName} className="camp-image" />
-        ) : (
-          <div>Image Not found</div>
-        )}
+        <img
+          src={imgSrc || '/img/camp1.jpg'}
+          alt={campName}
+          className="camp-image"
+          onError={(e) => { (e.target as HTMLImageElement).src = '/img/camp1.jpg' }}
+        />
         <div className="camp-image-overlay" />
         <div className="camp-image-badges">
           <span className="badge badge-region">{region}</span>

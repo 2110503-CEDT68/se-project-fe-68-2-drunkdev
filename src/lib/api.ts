@@ -1,6 +1,6 @@
 import { Camp, Booking, User } from '@/types/camp'
 
-const BASE_URL = 'http://localhost:5000'
+const BASE_URL = 'http://localhost:5001'
 
 // ── Campgrounds ──────────────────────────────
 export async function getCamps(): Promise<Camp[]> {
@@ -13,6 +13,7 @@ export async function getCamps(): Promise<Camp[]> {
 export async function getCampById(id: string): Promise<Camp> {
   const res = await fetch(`${BASE_URL}/api/v1/campgrounds/${id}`)
   const data = await res.json()
+  if (!data.success) throw new Error(data.message || 'Can not get Campground')
   return data.data
 }
 
@@ -59,6 +60,7 @@ export async function getMe(token: string): Promise<User> {
     headers: { Authorization: `Bearer ${token}` }
   })
   const data = await res.json()
+  if (!data.success) throw new Error(data.message || 'Failed to fetch user')
   return data.data
 }
 
@@ -68,6 +70,7 @@ export async function getMyBookings(token: string): Promise<Booking[]> {
     headers: { Authorization: `Bearer ${token}` }
   })
   const data = await res.json()
+  if (!data.success) throw new Error(data.message || 'Failed to fetch bookings')
   return data.data
 }
 

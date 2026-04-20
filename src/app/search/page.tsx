@@ -20,6 +20,7 @@ function SearchContent() {
   useEffect(() => {
     getCamps()
       .then(setCamps)
+      .catch(err => console.error('Failed to fetch camps:', err))
       .finally(() => setLoading(false))
   }, [])
 
