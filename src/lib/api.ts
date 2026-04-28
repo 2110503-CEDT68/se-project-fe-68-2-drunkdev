@@ -1,6 +1,6 @@
 import { Camp, Booking, User } from '@/types/camp'
 
-const BASE_URL = 'http://localhost:5001'
+const BASE_URL = 'http://localhost:5000'
 
 // ── Campgrounds ──────────────────────────────
 export async function getCamps(): Promise<Camp[]> {
