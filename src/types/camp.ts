@@ -34,6 +34,13 @@ export interface Booking {
     address: string
     tel: string
   }
+  room?: {
+    roomType: string
+    description: string
+    price: number
+    capacity: number
+  }
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed'
   createdAt: string
 }
 

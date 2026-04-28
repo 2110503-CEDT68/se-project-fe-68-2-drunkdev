@@ -4,10 +4,12 @@ import CampDetails from "./CampDetails";
 import CampRatingsReviews from "./CampRatingsReviews";
 import CampRoomTypes from "./CampRoomTypes";
 import CampReservation from "./CampReservation";
-import { getCampById, createBooking } from "@/lib/api";
+import { ReservationPaymentPage, ReservationInfo } from "./ReservationPaymentPage";
+import { getCampById, createBooking, getCreditCards, payBooking, BookingRoom } from "@/lib/api";
 import { getToken, isLoggedIn } from "@/lib/auth";
 import { useParams, useRouter } from "next/navigation";
 import { Camp, Room } from "@/types/camp";
+import type { CreditCard } from "./ReservationPaymentPage";
 
 
 // ─── Page Component ───────────────────────────────────────────────────────────
@@ -23,6 +25,9 @@ const CampgroundDetailPage = () => {
   const [guests, setGuests] = useState(1);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingError, setBookingError] = useState('');
+  const [showPayment, setShowPayment] = useState(false);
+  const [reservationInfo, setReservationInfo] = useState<ReservationInfo | null>(null);
+  const [savedCards, setSavedCards] = useState<CreditCard[]>([]);
 
   useEffect(() => {
     getCampById(id).then((c) => {
@@ -32,27 +37,108 @@ const CampgroundDetailPage = () => {
     }).catch(err => console.error('Failed to fetch camp:', err));
   }, [id])
 
+  const formatDate = (dateStr: string) =>
+    new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', {
+      year: 'numeric', month: 'short', day: 'numeric',
+    });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const mapBackendCard = (c: any): CreditCard => {
+    const digits = String(c.cardNumber ?? '').replace(/\D/g, '');
+    const first = digits[0];
+    const type: CreditCard['type'] =
+      first === '4' ? 'visa' : first === '5' ? 'mastercard' : first === '3' ? 'amex' : 'visa';
+    const lastFour = digits.slice(-4) || '????';
+    const mm = String(c.expiryMonth ?? '').padStart(2, '0');
+    const yy = String(c.expiryYear ?? '').slice(-2);
+    return {
+      id: c._id,
+      type,
+      label: type.charAt(0).toUpperCase() + type.slice(1),
+      lastFour,
+      expiry: `${mm}/${yy}`,
+      isDefault: c.isDefault ?? false,
+    };
+  };
+
   const handleBook = async () => {
     if (!isLoggedIn()) { router.push('/auth'); return; }
     if (!bookDate) { setBookingError('กรุณาเลือกวันที่'); return; }
     if (selectedRoom && guests > selectedRoom.capacity) { setBookingError(`จำนวนคนเกินความจุ (สูงสุด ${selectedRoom.capacity} คน)`); return; }
+    if (!selectedRoom || !camp) return;
+    setBookingError('');
+
+    const checkOutDate = new Date(bookDate + 'T12:00:00');
+    checkOutDate.setDate(checkOutDate.getDate() + duration);
+
+    const token = getToken();
+    const cards = token
+      ? await getCreditCards(token).then((list) => list.map(mapBackendCard)).catch(() => [])
+      : [];
+    setSavedCards(cards);
+
+    setReservationInfo({
+      campName: camp.name,
+      campLocation: `${camp.district}, ${camp.province}`,
+      campImageUrl: camp.imgSrc?.[0] ?? '',
+      checkIn: formatDate(bookDate),
+      checkOut: checkOutDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
+      checkInTime: '2:00 PM',
+      checkOutTime: '12:00 PM',
+      nights: duration,
+      guests,
+      roomName: selectedRoom.roomType,
+      roomImageUrl: camp.imgSrc?.[1] ?? camp.imgSrc?.[0] ?? '',
+      roomTags: [`Up to ${selectedRoom.capacity} guests`],
+      pricePerNight: selectedRoom.price,
+    });
+    setShowPayment(true);
+  };
+
+  const buildRoom = (): BookingRoom => ({
+    roomType: selectedRoom?.roomType ?? '',
+    description: selectedRoom?.description ?? '',
+    price: selectedRoom?.price ?? 0,
+    capacity: selectedRoom?.capacity ?? 1,
+  });
+
+  const handleConfirmPayment = async (cardId: string) => {
     const token = getToken();
     if (!token) { router.push('/auth'); return; }
-    setBookingError('');
-    setBookingLoading(true);
+    const booking = await createBooking(token, id, new Date(bookDate).toISOString(), duration, buildRoom());
     try {
-      await createBooking(token, id, new Date(bookDate).toISOString(), duration);
-      router.push('/my-trips');
+      await payBooking(token, booking._id, cardId);
     } catch (e: unknown) {
-      setBookingError(e instanceof Error ? e.message : 'เกิดข้อผิดพลาด');
-    } finally {
-      setBookingLoading(false);
+      const msg = e instanceof Error ? e.message : 'Payment failed';
+      throw new Error(msg.toLowerCase().includes('expired') ? 'Credit Card out of balance' : msg);
     }
+    router.push('/my-trips');
+  };
+
+  const handleReserve = async () => {
+    const token = getToken();
+    if (!token) { router.push('/auth'); return; }
+    await createBooking(token, id, new Date(bookDate).toISOString(), duration, buildRoom());
+    router.push('/my-trips');
   };
 
   const isAdmin = false;
 
   if (!camp) return <div style={{ padding: '40px', textAlign: 'center' }}>Loading...</div>
+
+  if (showPayment && reservationInfo) {
+    return (
+      <ReservationPaymentPage
+        token={getToken() ?? ''}
+        reservation={reservationInfo}
+        savedCards={savedCards}
+        onConfirmPayment={handleConfirmPayment}
+        onReserve={handleReserve}
+        onBack={() => setShowPayment(false)}
+        onAddCard={() => {}}
+      />
+    );
+  }
 
   return (
     <>

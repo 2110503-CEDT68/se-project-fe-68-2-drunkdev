@@ -1,6 +1,6 @@
 import { Camp, Booking, User } from '@/types/camp'
 
-const BASE_URL = 'http://localhost:5000'
+const BASE_URL = 'http://localhost:5001'
 
 // ── Campgrounds ──────────────────────────────
 export async function getCamps(): Promise<Camp[]> {
@@ -74,17 +74,44 @@ export async function getMyBookings(token: string): Promise<Booking[]> {
   return data.data
 }
 
-export async function createBooking(token: string, campgroundId: string, bookDate: string, duration: number) {
+export interface BookingRoom {
+  roomType: string;
+  description: string;
+  price: number;
+  capacity: number;
+}
+
+export async function createBooking(
+  token: string,
+  campgroundId: string,
+  bookDate: string,
+  duration: number,
+  room: BookingRoom,
+) {
   const res = await fetch(`${BASE_URL}/api/v1/campgrounds/${campgroundId}/bookings`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`
     },
-    body: JSON.stringify({ bookDate, duration })
+    body: JSON.stringify({ bookDate, duration, room })
   })
   const data = await res.json()
   if (!data.success) throw new Error(data.message || 'Booking failed')
+  return data.data
+}
+
+export async function payBooking(token: string, bookingId: string, cardId: string) {
+  const res = await fetch(`${BASE_URL}/api/v1/bookings/${bookingId}/pay`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ cardId })
+  })
+  const data = await res.json()
+  if (!data.success) throw new Error(data.message || 'Payment failed')
   return data.data
 }
 
@@ -186,4 +213,115 @@ export async function deleteReview(token: string, reviewId: string) {
   const data = await res.json()
   if (!data.success) throw new Error(data.message || 'Delete review failed')
   return data
+}
+
+/**
+ * Get all saved credit cards
+ */
+export async function getCreditCards(token: string) {
+  const res = await fetch(`${BASE_URL}/api/v1/cards`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  })
+
+  const data = await res.json()
+  if (!data.success) throw new Error(data.message || 'Failed to get cards')
+  return data.data
+}
+
+/**
+ * Get single credit card by ID
+ */
+export async function getCreditCard(token: string, cardId: string) {
+  const res = await fetch(`${BASE_URL}/api/v1/cards/${cardId}`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  })
+
+  const data = await res.json()
+  if (!data.success) throw new Error(data.message || 'Failed to get card')
+  return data.data
+}
+
+/**
+ * Add new credit card
+ */
+export async function addCreditCard(
+  token: string,
+  cardHolderName: string,
+  cardNumber: string,
+  expiryMonth: number,
+  expiryYear: number,
+  CVV: string,
+  balance?: number,
+  isDefault: boolean = false
+) {
+  const res = await fetch(`${BASE_URL}/api/v1/cards`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      cardHolderName,
+      cardNumber,
+      expiryMonth,
+      expiryYear,
+      CVV,
+      ...(balance !== undefined && { balance }),
+      isDefault
+    })
+  })
+
+  const data = await res.json()
+  if (!data.success) throw new Error(data.message || 'Failed to add card')
+  return data.data
+}
+
+/**
+ * Update credit card
+ */
+export async function updateCreditCard(
+  token: string,
+  cardId: string,
+  updateData: {
+    cardholderName?: string
+    cardNumber?: string
+    expiryMonth?: number
+    expiryYear?: number
+    isDefault?: boolean
+  }
+) {
+  const res = await fetch(`${BASE_URL}/api/v1/cards/${cardId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(updateData)
+  })
+
+  const data = await res.json()
+  if (!data.success) throw new Error(data.message || 'Failed to update card')
+  return data.data
+}
+
+/**
+ * Delete credit card
+ */
+export async function deleteCreditCard(token: string, cardId: string) {
+  const res = await fetch(`${BASE_URL}/api/v1/cards/${cardId}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  })
+
+  const data = await res.json()
+  if (!data.success) throw new Error(data.message || 'Failed to delete card')
+  return true
 }
