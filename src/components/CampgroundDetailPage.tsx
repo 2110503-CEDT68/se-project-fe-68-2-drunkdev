@@ -110,7 +110,8 @@ const CampgroundDetailPage = () => {
       await payBooking(token, booking._id, cardId);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Payment failed';
-      throw new Error(msg.toLowerCase().includes('expired') ? 'Credit Card out of balance' : msg);
+      const isBalanceError = msg.toLowerCase().includes('expired') || msg.toLowerCase().includes('insufficient');
+      throw new Error(isBalanceError ? 'Credit Card out of balance' : msg);
     }
     router.push('/my-trips');
   };

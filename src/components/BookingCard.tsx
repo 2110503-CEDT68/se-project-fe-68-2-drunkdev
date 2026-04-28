@@ -1,4 +1,5 @@
-import React from "react";
+'use client'
+import React, { useState, useEffect } from "react";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -18,13 +19,17 @@ export interface Booking {
   guests?: number;
   totalPrice?: number;
   createdAt: string;
+  createdAtRaw?: string;
   tel: string;
+  paymentExpiresAt?: string;
+  deniedByAdmin?: boolean;
 }
 
 interface BookingCardProps {
   booking: Booking;
   onEdit: (booking: Booking) => void;
   onRemove: (booking: Booking) => void;
+  onCancel?: (booking: Booking) => void;
   onPay?: (booking: Booking) => void;
 }
 
@@ -44,9 +49,63 @@ const STATUS_STYLE: Record<BookingStatus, React.CSSProperties> = {
   cancelled: { background: "#f1efea", color: "#5f5e5a" },
 };
 
+const DENIED_STYLE: React.CSSProperties = { background: "#fce8e8", color: "#a32d2d" };
+
+
+// ─── Countdown Timer ───────────────────────────────────────────────────────────
+
+const PAYMENT_WINDOW_MS = 60 * 60 * 1000; // 1 hour fallback
+
+const CountdownTimer: React.FC<{ createdAt: string; paymentExpiresAt?: string }> = ({
+  createdAt,
+  paymentExpiresAt,
+}) => {
+  const deadline = paymentExpiresAt
+    ? new Date(paymentExpiresAt)
+    : new Date(new Date(createdAt).getTime() + PAYMENT_WINDOW_MS);
+
+  const calcSecs = () => Math.max(0, Math.floor((deadline.getTime() - Date.now()) / 1000));
+
+  const [secs, setSecs] = useState(calcSecs);
+
+  useEffect(() => {
+    const id = setInterval(() => setSecs(calcSecs), 1000);
+    return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deadline.getTime()]);
+
+  if (secs <= 0) return null;
+
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = secs % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+
+  const urgent = secs < 300; // red tint when under 5 min
+
+  return (
+    <span
+      style={{
+        fontSize: 11,
+        fontWeight: 600,
+        letterSpacing: "0.04em",
+        fontVariantNumeric: "tabular-nums",
+        color: urgent ? "#b83228" : "#a05c0a",
+        background: urgent ? "#fef0f0" : "#fef6e7",
+        border: `0.5px solid ${urgent ? "#f9c0bc" : "#f5dda0"}`,
+        borderRadius: 6,
+        padding: "2px 7px",
+        display: "inline-block",
+      }}
+    >
+      [{pad(h)}:{pad(m)}:{pad(s)}]
+    </span>
+  );
+};
+
 // ─── Component ─────────────────────────────────────────────────────────────────
 
-const BookingCard: React.FC<BookingCardProps> = ({ booking: b, onEdit, onRemove, onPay }) => {
+const BookingCard: React.FC<BookingCardProps> = ({ booking: b, onEdit, onRemove, onCancel, onPay }) => {
   const canEdit = b.status !== "completed" && b.status !== "cancelled" && b.status !== "pending";
 
   return (
@@ -73,10 +132,13 @@ const BookingCard: React.FC<BookingCardProps> = ({ booking: b, onEdit, onRemove,
         .bk-footer { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-top: 0.5px solid #f0ede8; background: #fdfcfa; }
         .bk-tel { display: flex; align-items: center; gap: 5px; font-size: 12px; color: #5a5a4a; }
         .bk-tel svg { width: 12px; height: 12px; color: #8a8a7a; }
+        .bk-actions-col { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
         .bk-actions { display: flex; gap: 6px; }
         .act-btn { display: inline-flex; align-items: center; gap: 5px; padding: 6px 11px; border-radius: 7px; border: 0.5px solid #e2ddd5; background: #fff; font-size: 11px; font-weight: 500; cursor: pointer; font-family: inherit; color: #5a5a4a; transition: all 0.15s; }
         .act-btn:hover { background: #f5f3ee; border-color: #bbb5aa; }
         .act-btn-del:hover { background: #fcebeb !important; border-color: #f09595 !important; color: #a32d2d !important; }
+        .act-btn-cancel { color: #a32d2d !important; border-color: #fca5a5 !important; }
+        .act-btn-cancel:hover { background: #fcebeb !important; border-color: #f09595 !important; }
         .act-btn-pay { background: #4a6741 !important; color: #fff !important; border-color: #4a6741 !important; }
         .act-btn-pay:hover { background: #3a5433 !important; border-color: #3a5433 !important; }
         .act-btn svg { width: 12px; height: 12px; }
@@ -92,8 +154,11 @@ const BookingCard: React.FC<BookingCardProps> = ({ booking: b, onEdit, onRemove,
           <div className="bk-main">
             <div className="bk-name-row">
               <span className="bk-name">{b.campName}</span>
-              <span className="bk-status" style={STATUS_STYLE[b.status]}>
-                {STATUS_LABEL[b.status]}
+              <span
+                className="bk-status"
+                style={b.deniedByAdmin ? DENIED_STYLE : STATUS_STYLE[b.status]}
+              >
+                {b.deniedByAdmin ? "Denied" : STATUS_LABEL[b.status]}
               </span>
             </div>
             <div className="bk-loc">
@@ -124,7 +189,9 @@ const BookingCard: React.FC<BookingCardProps> = ({ booking: b, onEdit, onRemove,
             {b.totalPrice != null && b.totalPrice > 0 && (
               <>
                 <div className="bk-price">฿{b.totalPrice.toLocaleString()}</div>
-                <div className="bk-price-lbl">Total paid</div>
+                <div className="bk-price-lbl">
+                  {b.status === "pending" ? "Total due" : "Total paid"}
+                </div>
               </>
             )}
             <div className="bk-created">Booked {b.createdAt}</div>
@@ -137,23 +204,51 @@ const BookingCard: React.FC<BookingCardProps> = ({ booking: b, onEdit, onRemove,
             <PhoneIcon />
             {b.tel}
           </div>
-          <div className="bk-actions">
-            {b.status === "pending" && onPay && (
-              <button className="act-btn act-btn-pay" onClick={() => onPay(b)}>
-                <CardIcon /> Pay
-              </button>
+
+          <div className="bk-actions-col">
+            {b.status === "pending" && (
+              <CountdownTimer
+                createdAt={b.createdAtRaw ?? b.createdAt}
+                paymentExpiresAt={b.paymentExpiresAt}
+              />
             )}
-            {canEdit && (
-              <button className="act-btn" onClick={() => onEdit(b)}>
-                <EditIcon /> Edit
-              </button>
-            )}
-            <button
-              className="act-btn act-btn-del"
-              onClick={() => onRemove(b)}
-            >
-              <TrashIcon /> Remove
-            </button>
+            <div className="bk-actions">
+              {/* pending: Cancel + Pay */}
+              {b.status === "pending" && (
+                <>
+                  {onCancel && (
+                    <button className="act-btn act-btn-cancel" onClick={() => onCancel(b)}>
+                      <XIcon /> Cancel
+                    </button>
+                  )}
+                  {onPay && (
+                    <button className="act-btn act-btn-pay" onClick={() => onPay(b)}>
+                      <CardIcon /> Pay
+                    </button>
+                  )}
+                </>
+              )}
+
+              {/* upcoming: Cancel only */}
+              {b.status === "upcoming" && onCancel && (
+                <button className="act-btn act-btn-cancel" onClick={() => onCancel(b)}>
+                  <XIcon /> Cancel
+                </button>
+              )}
+
+              {/* completed / cancelled: Remove only */}
+              {(b.status === "completed" || b.status === "cancelled") && (
+                <button className="act-btn act-btn-del" onClick={() => onRemove(b)}>
+                  <TrashIcon /> Remove
+                </button>
+              )}
+
+              {canEdit && (
+                <button className="act-btn" onClick={() => onEdit(b)}>
+                  <EditIcon /> Edit
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -210,6 +305,12 @@ const EditIcon = () => (
 const TrashIcon = () => (
   <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.4} style={{ width: 12, height: 12 }}>
     <path d="M3 4.5h10M6 4.5V3h4v1.5M5 4.5l.5 8h5l.5-8" />
+  </svg>
+);
+
+const XIcon = () => (
+  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.6} style={{ width: 12, height: 12 }}>
+    <path d="M4 4l8 8M12 4l-8 8" />
   </svg>
 );
 

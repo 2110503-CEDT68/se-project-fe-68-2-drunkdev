@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import CampCard from '@/components/CampCard'
+import ConsentBanner from '@/components/ConsentBanner'
 import { getCamps } from '@/lib/api'
 import { Camp } from '@/types/camp'
 import styles from './page.module.css'
@@ -67,6 +68,8 @@ export default function HomePage() {
           ))}
         </div>
       </section>
+
+      <ConsentBanner />
     </main>
   )
 }
