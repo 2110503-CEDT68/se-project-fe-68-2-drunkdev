@@ -205,10 +205,14 @@ export async function updateReview(token: string, reviewId: string, rating: numb
   return data
 }
 
-export async function deleteReview(token: string, reviewId: string) {
+export async function deleteReview(token: string, reviewId: string, reason?: string) {
   const res = await fetch(`${BASE_URL}/api/v1/reviews/${reviewId}`, {
     method: 'DELETE',
-    headers: { Authorization: `Bearer ${token}` }
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...(reason ? { 'Content-Type': 'application/json' } : {})
+    },
+    ...(reason ? { body: JSON.stringify({ reason }) } : {})
   })
   const data = await res.json()
   if (!data.success) throw new Error(data.message || 'Delete review failed')

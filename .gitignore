@@ -2,3 +2,5 @@ node_modules/
 .next/ 
 .env.local 
 *.zip 
+playwright-report/
+test-results/
