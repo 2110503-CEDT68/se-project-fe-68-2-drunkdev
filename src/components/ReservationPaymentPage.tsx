@@ -101,6 +101,7 @@ const ReservationPaymentPage: React.FC<ReservationPaymentPageProps> = ({
   const [editNumber, setEditNumber] = useState("");
   const [editExpiryMonth, setEditExpiryMonth] = useState("");
   const [editExpiryYear, setEditExpiryYear] = useState("");
+  const [editCVV, setEditCVV] = useState("");
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
   const [editError, setEditError] = useState("");
@@ -132,6 +133,7 @@ const ReservationPaymentPage: React.FC<ReservationPaymentPageProps> = ({
     setEditNumber("");
     setEditExpiryMonth(mm ?? "");
     setEditExpiryYear(yy ?? "");
+    setEditCVV("");
     setEditError("");
   };
 
@@ -150,7 +152,9 @@ const ReservationPaymentPage: React.FC<ReservationPaymentPageProps> = ({
         const yr = editExpiryYear.length === 2 ? "20" + editExpiryYear : editExpiryYear;
         updateData.expiryYear = parseInt(yr, 10);
       }
-      await updateCreditCard(token, editingCard.id, updateData);
+      if (editCVV.trim()) updateData.CVV = editCVV.trim();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await updateCreditCard(token, editingCard.id, updateData as any);
       const newLastFour = digits.length >= 4 ? digits.slice(-4) : editingCard.lastFour;
       const first = digits[0];
       const newType: CreditCard["type"] =
@@ -576,6 +580,17 @@ const ReservationPaymentPage: React.FC<ReservationPaymentPageProps> = ({
                         style={{ padding: "9px 11px", border: "0.5px solid #d5d0c8", borderRadius: 8, fontSize: 13, outline: "none", fontFamily: "inherit", background: "#fff", textAlign: "center" as const }}
                       />
                     </div>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, color: "#8a8a7a", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 5, display: "block" }}>CVV / CVC (leave blank to keep current)</label>
+                    <input
+                      value={editCVV}
+                      onChange={(e) => setEditCVV(e.target.value)}
+                      placeholder="•••"
+                      maxLength={4}
+                      type="password"
+                      style={{ width: "100%", padding: "9px 11px", border: "0.5px solid #d5d0c8", borderRadius: 8, fontSize: 13, outline: "none", fontFamily: "inherit", background: "#fff", boxSizing: "border-box" as const }}
+                    />
                   </div>
                 </div>
 

@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import BookingCard, { Booking, BookingStatus } from "./BookingCard";
 import { ReservationPaymentPage, ReservationInfo, CreditCard } from "./ReservationPaymentPage";
 import Navbar from "./Navbar";
-import { getMyBookings, deleteBooking, getCreditCards, payBooking } from "@/lib/api";
+import { getMyBookings, deleteBooking, getCreditCards, payBooking, cancelBooking, getCreditCard, updateCreditCard } from "@/lib/api";
 import { getToken } from "@/lib/auth";
 import { Booking as ApiBooking } from "@/types/camp";
 
@@ -54,7 +54,12 @@ function mapBooking(b: ApiBooking): Booking {
     campName: b.campground?.name ?? "—",
     location: b.campground?.address ?? "—",
     roomType: b.room?.roomType,
-    totalPrice: b.room ? b.room.price * b.duration : undefined,
+    totalPrice: b.room ? (() => {
+      const subtotal = b.room!.price * b.duration;
+      const serviceFee = Math.round(subtotal * 0.10);
+      const tax = Math.round(subtotal * 0.07);
+      return subtotal + serviceFee + tax;
+    })() : undefined,
     checkIn: fmtDate(b.bookDate),
     checkOut: checkOutDate.toLocaleDateString("en-US", {
       year: "numeric", month: "short", day: "numeric",
@@ -62,6 +67,9 @@ function mapBooking(b: ApiBooking): Booking {
     nights: b.duration,
     tel: b.campground?.tel ?? "—",
     createdAt: fmtDate(b.createdAt),
+    createdAtRaw: b.createdAt,
+    paymentExpiresAt: b.paymentExpiresAt,
+    deniedByAdmin: !!b.cancelledBy,
   };
 }
 
@@ -126,13 +134,50 @@ const MyTripsPage: React.FC = () => {
   };
 
   const handleRemove = async (booking: Booking) => {
-    if (!window.confirm(`Cancel booking for ${booking.campName}?`)) return;
+    if (!window.confirm(`Remove booking for ${booking.campName}? This cannot be undone.`)) return;
     const token = getToken();
     if (!token) return;
     try {
       await deleteBooking(token, booking.id);
       setRawBookings((prev) => prev.filter((b) => b._id !== booking.id));
       setBookings((prev) => prev.filter((b) => b.id !== booking.id));
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Failed to remove booking");
+    }
+  };
+
+  const handleCancel = async (booking: Booking) => {
+    if (!window.confirm(`Cancel booking for ${booking.campName}?`)) return;
+    const token = getToken();
+    if (!token) return;
+    try {
+      await cancelBooking(token, booking.id);
+
+      // Refund if the booking was already paid (upcoming = confirmed)
+      if (booking.status === "upcoming") {
+        const raw = rawBookings.find((b) => b._id === booking.id);
+        const cardId = raw?.paymentCard;
+
+        if (cardId && raw?.room && raw?.duration) {
+          // Must match the total charged at payment time
+          const subtotal = raw.room.price * raw.duration;
+          const serviceFee = Math.round(subtotal * 0.10);
+          const tax = Math.round(subtotal * 0.07);
+          const refundAmount = subtotal + serviceFee + tax;
+
+          const card = await getCreditCard(token, cardId);
+          await updateCreditCard(token, cardId, {
+            balance: (card.balance ?? 0) + refundAmount,
+          });
+        }
+      }
+
+      setRawBookings((prev) =>
+        prev.map((b) => b._id === booking.id ? { ...b, status: "cancelled" as ApiBooking["status"] } : b)
+      );
+      setBookings((prev) =>
+        prev.map((b) => b.id === booking.id ? { ...b, status: "cancelled" as BookingStatus } : b)
+      );
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : "Failed to cancel booking");
     }
@@ -163,7 +208,8 @@ const MyTripsPage: React.FC = () => {
       await payBooking(token, payingBooking._id, cardId);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Payment failed';
-      throw new Error(msg.toLowerCase().includes('expired') ? 'Credit Card out of balance' : msg);
+      const isBalanceError = msg.toLowerCase().includes('expired') || msg.toLowerCase().includes('insufficient');
+      throw new Error(isBalanceError ? 'Credit Card out of balance' : msg);
     }
     // Update local status to upcoming (confirmed after payment)
     setBookings((prev) =>
@@ -265,6 +311,7 @@ const MyTripsPage: React.FC = () => {
                     booking={booking}
                     onEdit={handleEdit}
                     onRemove={handleRemove}
+                    onCancel={handleCancel}
                     onPay={handlePay}
                   />
                 ))

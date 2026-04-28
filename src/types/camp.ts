@@ -42,6 +42,9 @@ export interface Booking {
   }
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed'
   createdAt: string
+  paymentExpiresAt?: string
+  paymentCard?: string
+  cancelledBy?: string
 }
 
 export interface User {

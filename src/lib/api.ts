@@ -125,6 +125,20 @@ export async function deleteBooking(token: string, bookingId: string) {
   return data
 }
 
+export async function cancelBooking(token: string, bookingId: string) {
+  const res = await fetch(`${BASE_URL}/api/v1/bookings/${bookingId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ status: 'cancelled' })
+  })
+  const data = await res.json()
+  if (!data.success) throw new Error(data.message || 'Cancel failed')
+  return data.data
+}
+
 export async function updateBooking(token: string, bookingId: string, bookDate: string, duration: number) {
   const res = await fetch(`${BASE_URL}/api/v1/bookings/${bookingId}`, {
     method: 'PUT',
@@ -289,11 +303,12 @@ export async function updateCreditCard(
   token: string,
   cardId: string,
   updateData: {
-    cardholderName?: string
+    cardHolderName?: string
     cardNumber?: string
     expiryMonth?: number
     expiryYear?: number
     isDefault?: boolean
+    balance?: number
   }
 ) {
   const res = await fetch(`${BASE_URL}/api/v1/cards/${cardId}`, {
